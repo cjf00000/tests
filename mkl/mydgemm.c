@@ -1,5 +1,6 @@
 #include <math.h>
 #include <mkl_scalapack.h>
+#include <time.h>
 
 #define MAX(x, y) ((x)>(y) ? (x):(y))
 
@@ -49,11 +50,11 @@ double* gen_b(int n, int m)
 int main()
 {
 	const MKL_INT m = 1000;
-	const MKL_INT k = 10000;
+	const MKL_INT k = 100000;
 	const MKL_INT n = 1000;
-	const MKL_INT nb = 2;
+	const MKL_INT nb = 100;
 	const MKL_INT nprow = 2;
-	const MKL_INT npcol = 1;
+	const MKL_INT npcol = 2;
 
     MKL_INT iam, nprocs, ictxt, myrow, mycol;
     MDESC   descA, descB, descC, descA_local, descB_local, descC_local;
@@ -115,8 +116,10 @@ int main()
     descinit_( descB, &k, &n, &nb, &nb, &i_zero, &i_zero, &ictxt, &b_lld, &info );
     descinit_( descC, &m, &n, &nb, &nb, &i_zero, &i_zero, &ictxt, &c_lld, &info );
 
+	printf("Rank %d: start distribute data\n", iam);
     pdgeadd_( &trans, &m, &k, &one, a, &i_one, &i_one, descA_local, &zero, A, &i_one, &i_one, descA );
     pdgeadd_( &trans, &k, &n, &one, b, &i_one, &i_one, descB_local, &zero, B, &i_one, &i_one, descB );
+	printf("Rank %d: finished distribute data\n", iam);
 
 	if (iam==0)
 	{
@@ -128,6 +131,7 @@ int main()
 
     pdgemm_( "N", "N", &m, &n, &k, &one, A, &i_one, &i_one, descA, B, &i_one, &i_one, descB,
              &zero, C, &i_one, &i_one, descC );
+	printf("Rank %d: finished dgemm\n", iam);
 	if (iam == 0)
 	{
 			puts("c");
