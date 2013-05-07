@@ -16,14 +16,14 @@ void distributed_dgemm(double *res, double *a, double *b, int n, int k, int m)
 
 void print(double *a, int n, int m)
 {
-	int i, j;
+/*	int i, j;
 	for (i=0; i<n; ++i)
 	{
 			for (j=0; j<m; ++j)
 					printf("%lf\t", a[i+j*n]);
 
 			printf("\n");
-	}
+	}*/
 }
 
 double* gen_a(int n, int m)
@@ -48,17 +48,18 @@ double* gen_b(int n, int m)
 
 int main()
 {
-	const MKL_INT n = 5;
-	const MKL_INT k = 8;
-	const MKL_INT m = 6;
+	const MKL_INT m = 1000;
+	const MKL_INT k = 10000;
+	const MKL_INT n = 1000;
 	const MKL_INT nb = 2;
 	const MKL_INT nprow = 2;
-	const MKL_INT npcol = 3;
+	const MKL_INT npcol = 1;
 
     MKL_INT iam, nprocs, ictxt, myrow, mycol;
     MDESC   descA, descB, descC, descA_local, descB_local, descC_local;
-    MKL_INT mp, nq, lld, lld_local;
 	MKL_INT info;
+	MKL_INT a_m_local, a_n_local, b_m_local, b_n_local, c_m_local, c_n_local;
+	MKL_INT a_lld, b_lld, c_lld;
 
     blacs_pinfo_( &iam, &nprocs );
     blacs_get_( &i_negone, &i_zero, &ictxt );
@@ -71,59 +72,74 @@ int main()
 
     if (iam==0)
     {
-		a = gen_a(n, k);
-		b = gen_b(k, m);
-		c = (double*)calloc(n*m, sizeof(double));
+		a = gen_a(m, k);
+		b = gen_b(k, n);
+		c = (double*)calloc(m*n, sizeof(double));
 
 		puts("a=");
-		print(a, n, k);
+		print(a, m, k);
 
 		puts("b=");
-		print(b, k, m);
+		print(b, k, n);
     }
 
-    a_mp = numroc_( &n, &nb, &myrow, &i_zero, &nprow );
-    a_nq = numroc_( &k, &nb, &mycol, &i_zero, &npcol );
+    a_m_local = numroc_( &m, &nb, &myrow, &i_zero, &nprow );
+    a_n_local = numroc_( &k, &nb, &mycol, &i_zero, &npcol );
 
-	b_mp = numroc_( &k, &nb, &myrow, &i_zero, &nprow );
-	b_nq = numroc_( &m, &nb, &mycol, &i_zero, &npcol );
+	b_m_local = numroc_( &k, &nb, &myrow, &i_zero, &nprow );
+	b_n_local = numroc_( &n, &nb, &mycol, &i_zero, &npcol );
 
-    c_mp = numroc_( &n, &nb, &myrow, &i_zero, &nprow );
-	c_nq = numroc_( &m, &nb, &mycol, &i_zero, &npcol );
+    c_m_local = numroc_( &m, &nb, &myrow, &i_zero, &nprow );
+	c_n_local = numroc_( &n, &nb, &mycol, &i_zero, &npcol );
 
-    double *A = (double*) calloc( a_mp * a_nq, sizeof( double ) );
-    double *B = (double*) calloc( b_mp * b_nq, sizeof( double ) );
-    double *C = (double*) calloc( c_mp * c_nq, sizeof( double ) );
+    double *A = (double*) calloc( a_m_local * a_n_local, sizeof( double ) );
+    double *B = (double*) calloc( b_m_local * b_n_local, sizeof( double ) );
+    double *C = (double*) calloc( c_m_local * c_n_local, sizeof( double ) );
 
-    a_lld_local = MAX( numroc_( &n, &k, &myrow, &i_zero, &nprow ), 1 );
-    a_lld = MAX( mp, 1 );
+    a_lld = MAX( a_m_local, 1 );
+	b_lld = MAX( b_m_local, 1 );
+	c_lld = MAX( c_m_local, 1 );
 
-    descinit_( descA_local, &n, &n, &n, &n, &i_zero, &i_zero, &ictxt, &lld_local, &info );
-    descinit_( descB_local, &n, &n, &n, &n, &i_zero, &i_zero, &ictxt, &lld_local, &info );
-    descinit_( descC_local, &n, &n, &n, &n, &i_zero, &i_zero, &ictxt, &lld_local, &info );
+	if (iam==0)
+	{
+			printf("a_m_local = %d\ta_n_local = %d\tb_m_local = %d\tb_n_local = %d\tc_m_local = %d\tc_n_local = %d\n", a_m_local, a_n_local, b_m_local, b_n_local,
+							c_m_local, c_n_local);
+			printf("a_lld = %d\tb_lld = %d\tc_lld = %d\n", a_lld, b_lld, c_lld);
+	}
 
-    descinit_( descA, &n, &n, &nb, &nb, &i_zero, &i_zero, &ictxt, &lld, &info );
-    descinit_( descB, &n, &n, &nb, &nb, &i_zero, &i_zero, &ictxt, &lld, &info );
-    descinit_( descC, &n, &n, &nb, &nb, &i_zero, &i_zero, &ictxt, &lld, &info );
+    descinit_( descA_local, &m, &k, &m, &k, &i_zero, &i_zero, &ictxt, &m, &info );
+    descinit_( descB_local, &k, &n, &k, &n, &i_zero, &i_zero, &ictxt, &k, &info );
+    descinit_( descC_local, &m, &n, &m, &n, &i_zero, &i_zero, &ictxt, &m, &info );
 
-//    pdgeadd_( &trans, &n, &n, &one, a, &i_one, &i_one, descA_local, &zero, A, &i_one, &i_one, descA );
-//    pdgeadd_( &trans, &n, &n, &one, b, &i_one, &i_one, descB_local, &zero, B, &i_one, &i_one, descB );
+    descinit_( descA, &m, &k, &nb, &nb, &i_zero, &i_zero, &ictxt, &a_lld, &info );
+    descinit_( descB, &k, &n, &nb, &nb, &i_zero, &i_zero, &ictxt, &b_lld, &info );
+    descinit_( descC, &m, &n, &nb, &nb, &i_zero, &i_zero, &ictxt, &c_lld, &info );
 
-    pdgemm_( "N", "N", &n, &n, &n, &one, A, &i_one, &i_one, descA, B, &i_one, &i_one, descB,
-             &zero, C, &i_one, &i_one, descC );
-
-//	pdgeadd_( &trans, &n, &n, &one, C, &i_one, &i_one, descC, &zero, c, &i_one, &i_one, descC_local);
+    pdgeadd_( &trans, &m, &k, &one, a, &i_one, &i_one, descA_local, &zero, A, &i_one, &i_one, descA );
+    pdgeadd_( &trans, &k, &n, &one, b, &i_one, &i_one, descB_local, &zero, B, &i_one, &i_one, descB );
 
 	if (iam==0)
 	{
 			puts("a");
-			print(A, nq, mp);
+			print(A, a_m_local, a_n_local);
 			puts("b");
-			print(B, nq, mp);
+			print(B, b_m_local, b_n_local);
+	}
+
+    pdgemm_( "N", "N", &m, &n, &k, &one, A, &i_one, &i_one, descA, B, &i_one, &i_one, descB,
+             &zero, C, &i_one, &i_one, descC );
+	if (iam == 0)
+	{
 			puts("c");
-			print(C, nq, mp);
+			print(C, c_m_local, c_n_local);
+	}
+
+	pdgeadd_( &trans, &m, &n, &one, C, &i_one, &i_one, descC, &zero, c, &i_one, &i_one, descC_local);
+
+	if (iam==0)
+	{
 			puts("global c");
-			print(c, n, n);
+			print(c, m, n);
 	}
 
 	free(A);
