@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
    int nA = numroc_( &M, &nb, &mycol, &ZERO, &npcol );
    int nx = numroc_( &M, &nb, &myrow, &ZERO, &nprow );
    int my = numroc_( &M, &nb, &myrow, &ZERO, &nprow );
+   printf("Rank = %d, mA = %d, nA = %d, nx = %d, ny = %d\n", myrank_mpi, mA, nA, nx, my);
    descinit_(descA, &M,   &M,   &nb,  &nb,  &ZERO, &ZERO, &ictxt, &mA,  &info);
    descinit_(descx, &M, &ONE,   &nb, &ONE,  &ZERO, &ZERO, &ictxt, &nx, &info);
 
