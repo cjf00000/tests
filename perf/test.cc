@@ -1,23 +1,13 @@
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 using namespace std;
 
-int costly(int x, int y)
+int another_costly(int x)
 {
-	int sum = 0;
-	for (int i=0; i<x; ++i)
-		for (int j=0; j<y; ++j)
-			sum += i*j;
-
-	return sum;
-}
-
-int another_costly(int x, int y)
-{
-	int sum = 0;
-	for (int i=0; i<x; ++i)
-		for (int j=0; j<y; ++j)
-			sum += i*j;
+	double sum = 0;
+	for (int i=2; i<x; ++i)
+		sum += log((double)x);
 
 	return sum;
 }
@@ -26,11 +16,8 @@ int main()
 {
 	int sum = 0;
 
-	for (int i=0; i<1000; ++i)
-		if ((rand()&1) == 1)
-			sum += costly(i, i*2);
-		else
-			sum += another_costly(i, i/2);
+	for (int i=0; i<10000; ++i)
+		sum += another_costly(i);
 
 	cout << sum << endl;
 }
