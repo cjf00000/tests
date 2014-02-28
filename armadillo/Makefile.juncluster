@@ -1,0 +1,13 @@
+#MKLINC=/home/jianfei/bin/intel/composer_xe/composer_xe_2013.2.146/mkl/include
+#MKLLIB=/home/jianfei/bin/intel/composer_xe/composer_xe_2013.2.146/compiler/lib/intel64
+#ICCLIB=/home/jianfei/bin/intel/composer_xe/composer_xe_2013.2.146/mkl/lib/intel64
+LDFLAGS=-L/home/jianfei/toolkit/third_party/lib -L$(MKLLIB) -L$(ICCLIB) -llapack -lblas #-lmkl_intel_ilp64 -lmkl_core -lmkl_intel_thread -liomp5 -ldl -lpthread -lm
+CXXFLAGS=-I$(MKLINC) -I/home/jianfei/toolkit/third_party/include #-DMKL_ILP64 -m64 -O3
+CC=g++
+
+example: example.o
+example.o: example.cpp
+
+clean:
+	rm *.o
+	rm example
