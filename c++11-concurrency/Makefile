@@ -1,4 +1,4 @@
-BINS=threads mutex atomic future serial boost_atomic condition_variable producer_consumer
+BINS=threads mutex atomic future serial boost_atomic condition_variable producer_consumer thread_lambda
 
 all: $(BINS)
 
