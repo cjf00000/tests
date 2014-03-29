@@ -1,4 +1,4 @@
-BINS=threads mutex atomic future serial boost_atomic condition_variable producer_consumer thread_lambda
+BINS=threads mutex atomic future serial boost_atomic condition_variable thread_lambda singleton
 
 all: $(BINS)
 
@@ -7,8 +7,8 @@ OBJECTS=$(patsubst %.cpp,%.o,$(SOURCES))
 
 CC=g++
 LD=g++
-CPPFLAGS=-std=c++11 -Wall -g -O2
-LDFLAGS=-pthread
+CPPFLAGS=-std=c++11 -Wall -g -O2 -m64
+LDFLAGS=-pthread -m64
 
 %: %.o
 	$(LD) $^ -o $@ $(LDFLAGS) 
